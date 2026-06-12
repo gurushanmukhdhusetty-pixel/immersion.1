@@ -3,118 +3,57 @@ import pandas as pd
 import uuid
 from datetime import datetime
 
-st.set_page_config(page_title="MSME POS", page_icon="🛍️", layout="wide")
+st.set_page_config(page_title="MSME Enterprise POS", page_icon="⚡", layout="wide")
 
 # -----------------------------
-# ADVANCED SAAS CSS INJECTION
+# ENTERPRISE UI STYLING
 # -----------------------------
-def apply_pro_css():
+def apply_enterprise_css():
     st.markdown("""
     <style>
-    /* 1. Hide Streamlit Branding */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-
-    /* 2. Main Background & Typography */
-    .stApp {
-        background-color: #F3F4F6;
-        font-family: 'Inter', -apple-system, sans-serif;
-    }
-
-    /* 3. Dark Mode Sidebar */
-    [data-testid="stSidebar"] {
-        background-color: #111827;
-        padding-top: 2rem;
-    }
-    [data-testid="stSidebar"] * {
-        color: #E5E7EB !important;
-    }
-    /* Sidebar Navigation Radio Buttons */
-    div[role="radiogroup"] > label {
-        padding: 10px 15px;
-        border-radius: 8px;
-        transition: background 0.2s ease;
-    }
-    div[role="radiogroup"] > label:hover {
-        background-color: #374151;
-    }
-
-    /* 4. Floating Metric Cards (SaaS Style) */
+    /* Soft App Background */
+    .stApp { background-color: #f4f7f6; }
+    
+    /* Beautiful Metric Cards */
     [data-testid="metric-container"] {
-        background-color: #FFFFFF;
-        border: 1px solid #E5E7EB;
-        padding: 20px 25px;
+        background-color: #ffffff;
+        border: 1px solid #e1e4e8;
+        padding: 20px;
         border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        border-top: 4px solid #4F46E5; /* Indigo Accent */
-        transition: transform 0.2s ease;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        border-left: 6px solid #2e66ff;
     }
-    [data-testid="metric-container"]:hover {
-        transform: translateY(-3px);
-    }
-    [data-testid="stMetricValue"] {
-        color: #111827;
-        font-weight: 700;
-        font-size: 2rem;
-    }
-
-    /* 5. Gradient Primary Buttons */
-    button[kind="primary"] {
-        background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+    
+    /* Gradient Primary Buttons */
+    .stButton>button[kind="primary"] {
+        background: linear-gradient(135deg, #2e66ff 0%, #003cc7 100%);
+        color: white;
         border: none;
-        box-shadow: 0 4px 6px rgba(79, 70, 229, 0.3);
         border-radius: 8px;
-        color: white !important;
         font-weight: 600;
-        padding: 0.5rem 1rem;
-        transition: all 0.3s ease;
+        transition: transform 0.2s;
     }
-    button[kind="primary"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 12px rgba(79, 70, 229, 0.4);
+    .stButton>button[kind="primary"]:hover {
+        transform: scale(1.02);
     }
-
-    /* 6. Tabs Styling */
-    .stTabs [data-baseweb="tab-list"] {
-        background-color: #FFFFFF;
-        padding: 10px 10px 0 10px;
-        border-radius: 12px 12px 0 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        gap: 20px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        padding-bottom: 15px;
-        font-weight: 600;
-        color: #6B7280;
-    }
-    .stTabs [aria-selected="true"] {
-        color: #4F46E5 !important;
-        border-bottom-color: #4F46E5 !important;
-    }
-
-    /* 7. Inputs & Dataframes */
-    [data-testid="stDataFrame"] {
-        background: white;
-        border-radius: 12px;
-        padding: 10px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    
+    /* Card Containers */
+    [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] {
+        background-color: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     </style>
     """, unsafe_allow_html=True)
 
 # -----------------------------
-# COMPATIBILITY HELPER
+# CORE HELPERS
 # -----------------------------
 def force_rerun():
-    if hasattr(st, "rerun"):
-        st.rerun()
-    else:
-        st.experimental_rerun()
+    if hasattr(st, "rerun"): st.rerun()
+    else: st.experimental_rerun()
 
-# -----------------------------
-# SESSION STATE INIT
-# -----------------------------
 def init_session_state():
     defaults = {
         "users": {
@@ -122,173 +61,334 @@ def init_session_state():
             "manager": {"password": "manager123", "role": "Manager"},
             "staff": {"password": "staff123", "role": "Staff"}
         },
-        "logged_in": False,
-        "current_user": None,
-        "inventory": [],
-        "cart": [],
-        "sales": [],
-        "staff_list": [],
-        "transfers": [],
-        "returns": []
+        "logged_in": False, "current_user": None, "inventory": [],
+        "cart": [], "sales": [], "staff_list": [], "transfers": [], "returns": []
     }
-    for key, value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
+    for k, v in defaults.items():
+        if k not in st.session_state: st.session_state[k] = v
 
-apply_pro_css()
+def generate_id(): return str(uuid.uuid4())[:8]
+def total_stock(): return sum(item["quantity"] for item in st.session_state.inventory)
+def total_products(): return len(st.session_state.inventory)
+def total_sales(): return sum(sale["total"] for sale in st.session_state.sales)
+
+apply_enterprise_css()
 init_session_state()
-
-# -----------------------------
-# HELPERS
-# -----------------------------
-def generate_id():
-    return str(uuid.uuid4())[:8]
-
-def total_stock():
-    return sum(item["quantity"] for item in st.session_state.inventory)
-
-def total_products():
-    return len(st.session_state.inventory)
-
-def total_sales():
-    return sum(sale["total"] for sale in st.session_state.sales)
-
-def render_table(data):
-    if data:
-        df = pd.DataFrame(data)
-        st.dataframe(df, use_container_width=True, hide_index=True)
-    else:
-        st.info("No data available to display.")
 
 # -----------------------------
 # LOGIN
 # -----------------------------
 def login():
-    st.markdown("<h1 style='text-align: center; color: #111827; padding-top: 50px;'>Dhusetty Enterprise POS</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #6B7280; margin-bottom: 40px;'>Secure Access Portal</p>", unsafe_allow_html=True)
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 1.2, 1])
     
-    col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
-        with st.container():
-            st.info("💡 **Admin:** `shanmukh` | **Pass:** `owner123`")
-            username = st.text_input("System Username").strip().lower()
-            password = st.text_input("Password", type="password")
+        st.title("⚡ Enterprise POS")
+        st.caption("Sign in to your workspace")
+        
+        with st.container(border=True):
+            username = st.text_input("Username", placeholder="e.g. shanmukh").strip().lower()
+            password = st.text_input("Password", type="password", placeholder="••••••••")
             
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("Authenticate System", type="primary", use_container_width=True):
+            if st.button("Authenticate", type="primary", use_container_width=True):
                 user = st.session_state.users.get(username)
                 if user and user["password"] == password:
                     st.session_state.logged_in = True
                     st.session_state.current_user = {"username": username, "role": user["role"]}
-                    st.toast("✅ Authentication successful")
+                    st.toast("Welcome back!")
                     force_rerun()
                 else:
-                    st.error("❌ Invalid credentials. Access denied.")
+                    st.error("Invalid credentials. Try again.")
 
 # -----------------------------
 # SIDEBAR
 # -----------------------------
 def sidebar():
-    st.sidebar.markdown("## Shanmukh Dhusetty \n**Enterprise POS**")
     role = st.session_state.current_user["role"]
-    st.sidebar.caption(f"Active User: **{st.session_state.current_user['username'].title()}** ({role})")
-    st.sidebar.markdown("<br>", unsafe_allow_html=True)
+    username = st.session_state.current_user["username"].title()
+    
+    with st.sidebar:
+        st.markdown(f"### 👋 Hi, {username}")
+        st.caption(f"Role: {role}")
+        st.divider()
 
-    menu = {"📊 Overview Dashboard": "Dashboard", "📦 Inventory Master": "Inventory"}
+        menu = {"📊 Dashboard": "Dashboard", "📦 Inventory": "Inventory"}
+        if role in ["Owner", "Manager", "Staff"]:
+            menu.update({"🛒 Point of Sale": "POS", "🚚 Transfers": "Transfers", "↩️ Returns": "Returns"})
+        if role in ["Owner", "Manager"]:
+            menu["👥 Staff": "Staff"]
+        if role == "Owner":
+            menu["📈 Analytics": "Analytics"]
+        menu["🚪 Logout"] = "Logout"
 
-    if role in ["Owner", "Manager", "Staff"]:
-        menu.update({
-            "🛒 Point of Sale": "POS", 
-            "🚚 Stock Transfers": "Transfers", 
-            "↩️ Return Processing": "Returns", 
-            "🗑️ Write-Off Protocol": "Write-Off", 
-            "🔍 Barcode Scanner": "Barcode"
-        })
-
-    if role in ["Owner", "Manager"]:
-        menu["👥 Staff Roster"] = "Staff"
-
-    if role == "Owner":
-        menu["📈 Financial Analytics"] = "Analytics"
-
-    menu["🚪 Terminate Session"] = "Logout"
-
-    choice_label = st.sidebar.radio("Navigation", list(menu.keys()), label_visibility="collapsed")
-    return menu[choice_label]
+        choice = st.radio("Navigation", list(menu.keys()), label_visibility="collapsed")
+        return menu[choice]
 
 # -----------------------------
 # DASHBOARD
 # -----------------------------
 def dashboard():
-    st.markdown("<h2 style='color: #111827;'>📊 Executive Dashboard</h2>", unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total SKU Count", total_products())
-    col2.metric("Active Stock Units", total_stock())
-    col3.metric("Gross Revenue", f"₹{total_sales():,.2f}")
-
-    st.markdown("<br><br><h4 style='color: #374151;'>⏱️ Recent Transaction Log</h4>", unsafe_allow_html=True)
-    render_table(st.session_state.sales)
+    st.title("📊 Overview")
+    
+    # Top Metrics
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Active Products", total_products())
+    c2.metric("Total Units in Stock", total_stock())
+    c3.metric("Gross Revenue", f"₹{total_sales():,.2f}")
+    
+    st.markdown("---")
+    
+    # Charts
+    c_left, c_right = st.columns([2, 1])
+    
+    with c_left:
+        st.subheader("Inventory Levels")
+        if st.session_state.inventory:
+            df = pd.DataFrame(st.session_state.inventory)
+            st.bar_chart(df.set_index("name")["quantity"], color="#2e66ff")
+        else:
+            st.info("No data to display.")
+            
+    with c_right:
+        st.subheader("Recent Activity")
+        if st.session_state.sales:
+            st.dataframe(pd.DataFrame(st.session_state.sales)[["date", "total"]].tail(5), use_container_width=True, hide_index=True)
+        else:
+            st.info("No recent sales.")
 
 # -----------------------------
 # INVENTORY
 # -----------------------------
 def inventory():
-    st.markdown("<h2 style='color: #111827;'>📦 Inventory Master</h2>", unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.title("📦 Inventory Control")
+    
+    # Hidden form to keep UI clean
+    with st.expander("➕ Add New Product"):
+        with st.form("add_product_form", clear_on_submit=True):
+            c1, c2 = st.columns(2)
+            name = c1.text_input("Product Name*")
+            sku = c2.text_input("SKU / Barcode*")
+            price = c1.number_input("Unit Price (₹)", min_value=0.0)
+            qty = c2.number_input("Initial Quantity", min_value=0)
+            
+            if st.form_submit_button("Save Product", type="primary"):
+                if name and sku:
+                    st.session_state.inventory.append({
+                        "id": generate_id(), "name": name, "sku": sku, "price": price, "quantity": int(qty)
+                    })
+                    st.toast(f"Added {name}!")
+                    force_rerun()
+                else:
+                    st.error("Name and SKU are required.")
 
-    tab1, tab2 = st.tabs(["➕ Register New SKU", "📋 Active Database"])
-
-    with tab1:
-        st.markdown("<br>", unsafe_allow_html=True)
-        col1, col2 = st.columns(2)
-        name = col1.text_input("Item Designation (Name)")
-        sku = col2.text_input("Barcode / SKU")
-        price = col1.number_input("Retail Price (₹)", min_value=0.0)
-        quantity = col2.number_input("Initial Intake Quantity", min_value=0)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Publish to Inventory", type="primary"):
-            if name and sku:
-                st.session_state.inventory.append({
-                    "id": generate_id(), "name": name, "sku": sku, "price": price, "quantity": int(quantity)
-                })
-                st.toast(f"✅ Registered: {name}")
-            else:
-                st.error("⚠️ Designation and SKU are mandatory fields.")
-
-    with tab2:
-        st.markdown("<br>", unsafe_allow_html=True)
-        render_table(st.session_state.inventory)
-
-        st.markdown("<br><hr><br>", unsafe_allow_html=True)
-        col1, col2 = st.columns([3, 1])
-        delete_id = col1.text_input("Target ID for Deletion")
-        if col2.button("🗑️ Execute Deletion", use_container_width=True):
-            initial_len = len(st.session_state.inventory)
-            st.session_state.inventory = [p for p in st.session_state.inventory if p["id"] != delete_id]
-            if len(st.session_state.inventory) < initial_len:
-                st.toast("🗑️ Record purged.")
-                force_rerun()
-            else:
-                st.error("❌ Invalid ID target.")
+    # Inventory Table
+    st.subheader("Current Stock")
+    if st.session_state.inventory:
+        df = pd.DataFrame(st.session_state.inventory)
+        # Highlight low stock
+        def highlight_low_stock(val):
+            return 'color: red; font-weight: bold' if isinstance(val, int) and val < 5 else ''
+        
+        st.dataframe(df.style.map(highlight_low_stock, subset=['quantity']), use_container_width=True, hide_index=True)
+        
+        # Delete tool
+        c1, c2 = st.columns([1, 4])
+        del_id = c1.text_input("Product ID to Remove")
+        if c1.button("🗑️ Delete", use_container_width=True):
+            st.session_state.inventory = [p for p in st.session_state.inventory if p["id"] != del_id]
+            st.toast("Product deleted.")
+            force_rerun()
+    else:
+        st.info("Inventory is empty.")
 
 # -----------------------------
-# POS SYSTEM
+# POINT OF SALE (GRID LAYOUT)
 # -----------------------------
 def pos():
-    st.markdown("<h2 style='color: #111827;'>🛒 Terminal Operations</h2>", unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
-
+    st.title("🛒 Register")
+    
     if not st.session_state.inventory:
-        st.warning("⚠️ Terminal locked: Zero inventory registered.")
+        st.warning("Add products to inventory first.")
         return
 
-    tab1, tab2, tab3 = st.tabs(["🛍️ Scanner/Browse", "🛒 Active Cart", "📜 Ledger"])
+    col_products, col_cart = st.columns([2.2, 1])
 
-    with tab1:
-        st.markdown("<br>", unsafe_allow_html=True)
-        for product in st.session_state.inventory:
-            with st.container():
-                col1, col2, col3, col4, col5 = st
+    # Left Side: Product Grid
+    with col_products:
+        st.subheader("Tap to Add")
+        grid_cols = st.columns(3)
+        for index, product in enumerate(st.session_state.inventory):
+            with grid_cols[index % 3]:
+                with st.container(border=True):
+                    st.markdown(f"**{product['name']}**")
+                    st.caption(f"Stock: {product['quantity']} | SKU: {product['sku']}")
+                    st.markdown(f"### ₹{product['price']:,.2f}")
+                    
+                    qty = st.number_input("Qty", min_value=1, max_value=max(product["quantity"], 1), key=f"q_{product['id']}", label_visibility="collapsed")
+                    
+                    if st.button("➕ Add", key=f"btn_{product['id']}", type="primary", use_container_width=True):
+                        if product["quantity"] >= qty:
+                            item = next((i for i in st.session_state.cart if i["id"] == product["id"]), None)
+                            if item:
+                                item["quantity"] += qty
+                                item["subtotal"] = item["price"] * item["quantity"]
+                            else:
+                                st.session_state.cart.append({
+                                    "id": product["id"], "name": product["name"], 
+                                    "price": product["price"], "quantity": qty, 
+                                    "subtotal": product["price"] * qty
+                                })
+                            force_rerun()
+                        else:
+                            st.error("Low stock!")
+
+    # Right Side: Active Cart
+    with col_cart:
+        with st.container(border=True):
+            st.subheader("🧾 Current Order")
+            if not st.session_state.cart:
+                st.info("Cart is empty.")
+            else:
+                for item in st.session_state.cart:
+                    c1, c2 = st.columns([3, 1])
+                    c1.write(f"{item['quantity']}x **{item['name']}**")
+                    c2.write(f"₹{item['subtotal']:,.2f}")
+                
+                st.divider()
+                grand_total = sum(i["subtotal"] for i in st.session_state.cart)
+                st.markdown(f"## Total: ₹{grand_total:,.2f}")
+                
+                cust_name = st.text_input("Customer Name (Optional)", placeholder="Walk-in")
+                
+                if st.button("💳 Checkout", type="primary", use_container_width=True):
+                    sale = {
+                        "sale_id": generate_id(), "customer": cust_name or "Walk-in", 
+                        "items": len(st.session_state.cart), "total": grand_total, 
+                        "date": datetime.now().strftime("%Y-%m-%d %H:%M")
+                    }
+                    
+                    inv_dict = {p["id"]: p for p in st.session_state.inventory}
+                    for c_item in st.session_state.cart:
+                        if c_item["id"] in inv_dict:
+                            inv_dict[c_item["id"]]["quantity"] -= c_item["quantity"]
+
+                    st.session_state.sales.append(sale)
+                    st.session_state.cart.clear()
+                    st.toast("✅ Payment Successful!")
+                    st.balloons()
+                    force_rerun()
+                
+                if st.button("🗑️ Clear Cart", use_container_width=True):
+                    st.session_state.cart.clear()
+                    force_rerun()
+
+# -----------------------------
+# TRANSFERS
+# -----------------------------
+def transfers():
+    st.title("🚚 Transfers")
+    with st.expander("Initiate Transfer"):
+        if st.session_state.inventory:
+            p_dict = {p["name"]: p["id"] for p in st.session_state.inventory}
+            c1, c2 = st.columns(2)
+            s_name = c1.selectbox("Product", list(p_dict.keys()))
+            dest = c2.text_input("Destination")
+            qty = c1.number_input("Qty", min_value=1)
+            
+            if st.button("Transfer", type="primary"):
+                p = next((x for x in st.session_state.inventory if x["id"] == p_dict[s_name]), None)
+                if p and p["quantity"] >= qty and dest:
+                    p["quantity"] -= int(qty)
+                    st.session_state.transfers.append({
+                        "id": generate_id(), "product": s_name, "destination": dest, "qty": int(qty), "date": datetime.now().strftime("%Y-%m-%d")
+                    })
+                    st.toast("Transfer logged.")
+                    force_rerun()
+    
+    st.subheader("Log")
+    if st.session_state.transfers: st.dataframe(pd.DataFrame(st.session_state.transfers), use_container_width=True, hide_index=True)
+
+# -----------------------------
+# RETURNS
+# -----------------------------
+def returns():
+    st.title("↩️ Returns")
+    with st.expander("Process Return"):
+        if st.session_state.inventory:
+            p_dict = {p["name"]: p["id"] for p in st.session_state.inventory}
+            s_name = st.selectbox("Product", list(p_dict.keys()))
+            c1, c2 = st.columns(2)
+            qty = c1.number_input("Qty", min_value=1)
+            reason = c2.text_input("Reason")
+            
+            if st.button("Return to Stock", type="primary"):
+                p = next((x for x in st.session_state.inventory if x["id"] == p_dict[s_name]), None)
+                if p:
+                    p["quantity"] += int(qty)
+                    st.session_state.returns.append({
+                        "id": generate_id(), "product": s_name, "qty": int(qty), "reason": reason, "date": datetime.now().strftime("%Y-%m-%d")
+                    })
+                    st.toast("Returned to inventory.")
+                    force_rerun()
+                    
+    st.subheader("Log")
+    if st.session_state.returns: st.dataframe(pd.DataFrame(st.session_state.returns), use_container_width=True, hide_index=True)
+
+# -----------------------------
+# STAFF
+# -----------------------------
+def staff():
+    st.title("👥 Staff Directory")
+    with st.expander("➕ Add Staff Member"):
+        c1, c2 = st.columns(2)
+        name = c1.text_input("Full Name")
+        role = c2.selectbox("Role", ["Cashier", "Storekeeper", "Manager"])
+        if st.button("Save", type="primary"):
+            st.session_state.staff_list.append({"id": generate_id(), "name": name, "role": role})
+            st.toast("Staff added.")
+            force_rerun()
+            
+    if st.session_state.staff_list:
+        st.dataframe(pd.DataFrame(st.session_state.staff_list), use_container_width=True, hide_index=True)
+
+# -----------------------------
+# ANALYTICS
+# -----------------------------
+def analytics():
+    st.title("📈 Performance Analytics")
+    
+    if not st.session_state.sales:
+        st.info("Not enough data to generate analytics yet. Make some sales!")
+        return
+
+    df_sales = pd.DataFrame(st.session_state.sales)
+    
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Total Revenue", f"₹{df_sales['total'].sum():,.2f}")
+    c2.metric("Total Transactions", len(df_sales))
+    c3.metric("Avg Order Value", f"₹{df_sales['total'].mean():,.2f}")
+    
+    st.markdown("---")
+    st.subheader("Revenue Timeline")
+    # Group by date
+    timeline = df_sales.groupby('date')['total'].sum()
+    st.line_chart(timeline, color="#00c853")
+
+# -----------------------------
+# APP ROUTING
+# -----------------------------
+if not st.session_state.logged_in:
+    login()
+else:
+    page = sidebar()
+    pages = {
+        "Dashboard": dashboard, "Inventory": inventory, "POS": pos,
+        "Transfers": transfers, "Returns": returns, "Staff": staff, "Analytics": analytics
+    }
+    
+    if page in pages:
+        pages[page]()
+    elif page == "Logout":
+        st.session_state.logged_in = False
+        st.session_state.current_user = None
+        force_rerun()
